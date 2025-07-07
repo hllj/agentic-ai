@@ -1,16 +1,7 @@
 from typing import Optional, Dict, Any, List
 
 from .graph import ContextAwareGraphBuilder, RetrievalGraphBuilder, MemoryEnhancedGraphBuilder
-
-# Import LangGraph components when available
-try:
-    from langgraph.graph import StateGraph, END
-    LANGGRAPH_AVAILABLE = True
-except ImportError:
-    # Fallback when LangGraph is not available
-    LANGGRAPH_AVAILABLE = False
-    StateGraph = None
-    END = "END"
+from langgraph.graph import StateGraph, END
 
 class GraphFactory:
     """Factory for creating different types of workflow graphs."""

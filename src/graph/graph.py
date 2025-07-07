@@ -8,16 +8,9 @@ for context-aware LLM applications using LangGraph.
 from typing import Dict, List, Any, Optional
 import logging
 from datetime import datetime
+import openai
 
-# Import LangGraph components when available
-try:
-    from langgraph.graph import StateGraph, END
-    LANGGRAPH_AVAILABLE = True
-except ImportError:
-    # Fallback when LangGraph is not available
-    LANGGRAPH_AVAILABLE = False
-    StateGraph = None
-    END = "END"
+from langgraph.graph import StateGraph, END
 
 from ..states import (
     MessagesState, ContextAwareState, RetrievalState,
@@ -37,10 +30,6 @@ class ContextAwareGraphBuilder(BaseGraphBuilder):
     
     def create_graph(self) -> Optional[StateGraph]:
         """Create a context-aware conversation graph."""
-        if not LANGGRAPH_AVAILABLE:
-            self.logger.error("LangGraph is required for graph creation")
-            return None
-        
         # Create the graph with ContextAwareState
         graph = StateGraph(ContextAwareState)
         
@@ -106,18 +95,6 @@ class ContextAwareGraphBuilder(BaseGraphBuilder):
     
     def _generate_response(self, state: ContextAwareState) -> Dict[str, Any]:
         """Generate LLM response using context."""
-        try:
-            import openai
-        except ImportError:
-            self.logger.error("OpenAI package not available")
-            return {
-                "messages": [{
-                    "role": "assistant",
-                    "content": "Error: OpenAI package not available. Please install it.",
-                    "timestamp": datetime.now()
-                }]
-            }
-        
         context = state.get("context", {})
         messages = state.get("messages", [])
         
@@ -202,10 +179,6 @@ class RetrievalGraphBuilder(BaseGraphBuilder):
     
     def create_graph(self) -> Optional[StateGraph]:
         """Create a RAG workflow graph."""
-        if not LANGGRAPH_AVAILABLE:
-            self.logger.error("LangGraph is required for graph creation")
-            return None
-        
         # Create the graph with RetrievalState
         graph = StateGraph(RetrievalState)
         
@@ -278,18 +251,6 @@ class RetrievalGraphBuilder(BaseGraphBuilder):
     
     def _generate_answer(self, state: RetrievalState) -> Dict[str, Any]:
         """Generate answer based on retrieved documents using OpenAI."""
-        try:
-            import openai
-        except ImportError:
-            self.logger.error("OpenAI package not available")
-            return {
-                "messages": [{
-                    "role": "assistant",
-                    "content": "Error: OpenAI package not available. Please install it.",
-                    "timestamp": datetime.now()
-                }]
-            }
-        
         query = state.get("query", "")
         retrieved_docs = state.get("retrieved_docs", [])
         
@@ -367,10 +328,6 @@ class MemoryEnhancedGraphBuilder(BaseGraphBuilder):
     
     def create_graph(self) -> Optional[StateGraph]:
         """Create a memory-enhanced conversation graph."""
-        if not LANGGRAPH_AVAILABLE:
-            self.logger.error("LangGraph is required for graph creation")
-            return None
-        
         # Create the graph with MemoryEnhancedState
         graph = StateGraph(MemoryEnhancedState)
         
@@ -427,18 +384,6 @@ class MemoryEnhancedGraphBuilder(BaseGraphBuilder):
     
     def _generate_response(self, state: MemoryEnhancedState) -> Dict[str, Any]:
         """Generate response using memory context and OpenAI."""
-        try:
-            import openai
-        except ImportError:
-            self.logger.error("OpenAI package not available")
-            return {
-                "messages": [{
-                    "role": "assistant",
-                    "content": "Error: OpenAI package not available. Please install it.",
-                    "timestamp": datetime.now()
-                }]
-            }
-        
         messages = state.get("messages", [])
         buffer_memory = state.get("buffer_memory", [])
         summary_memory = state.get("summary_memory", "")

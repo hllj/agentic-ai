@@ -9,17 +9,8 @@ from typing import Dict, List, Any, Optional
 import logging
 from datetime import datetime
 
-# Try to import LangChain components
-try:
-    from langchain_openai import ChatOpenAI
-    from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-    LANGCHAIN_AVAILABLE = True
-except ImportError:
-    LANGCHAIN_AVAILABLE = False
-    ChatOpenAI = None
-    HumanMessage = None
-    AIMessage = None
-    SystemMessage = None
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from ..configuration import get_config
 from ..prompts import (
@@ -392,15 +383,6 @@ def update_conversation_memory(state: Dict[str, Any]) -> Dict[str, Any]:
 
 def generate_llm_response(state: Dict[str, Any]) -> Dict[str, Any]:
     """Generate response using LLM."""
-    if not LANGCHAIN_AVAILABLE:
-        # Fallback response when LangChain is not available
-        response_message = {
-            "role": "assistant",
-            "content": "I understand your message. However, LLM functionality is not currently available.",
-            "timestamp": datetime.now()
-        }
-        return {"messages": [response_message]}
-    
     # Get context and messages
     context = state.get("context", {})
     messages = state.get("messages", [])
@@ -486,26 +468,22 @@ def generate_rag_response(state: Dict[str, Any]) -> Dict[str, Any]:
         sources=sources[:3]
     )
     
-    if LANGCHAIN_AVAILABLE:
-        try:
-            # Initialize LLM
-            config = get_config()
-            llm = ChatOpenAI(
-                model=config.openai.model,
-                temperature=config.openai.temperature,
-                api_key=config.openai.api_key
-            )
-            
-            # Generate response
-            response = llm.invoke([HumanMessage(content=prompt)])
-            content = response.content
-            
-        except Exception as e:
-            logger.error(f"Error generating RAG response: {e}")
-            content = f"Based on the retrieved documents, I can provide some information about {query}, but encountered an error in processing."
-    else:
-        # Fallback without LLM
-        content = f"Based on the retrieved documents about {query}: {context[:200]}..."
+    try:
+        # Initialize LLM
+        config = get_config()
+        llm = ChatOpenAI(
+            model=config.openai.model,
+            temperature=config.openai.temperature,
+            api_key=config.openai.api_key
+        )
+        
+        # Generate response
+        response = llm.invoke([HumanMessage(content=prompt)])
+        content = response.content
+        
+    except Exception as e:
+        logger.error(f"Error generating RAG response: {e}")
+        content = f"Based on the retrieved documents, I can provide some information about {query}, but encountered an error in processing."
     
     # Create response message
     response_message = {

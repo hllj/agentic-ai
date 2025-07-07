@@ -69,51 +69,15 @@ class AgenticAIApp:
     
     def _check_dependencies(self):
         """Check which dependencies are available."""
-        dependencies = {
-            "langchain": False,
-            "langgraph": False,
-            "openai": False,
-            "chroma": False
+        # All dependencies are now assumed to be available
+        self.dependencies = {
+            "langchain": True,
+            "langgraph": True,
+            "openai": True,
+            "chroma": True
         }
         
-        # Check LangChain
-        try:
-            import langchain
-            dependencies["langchain"] = True
-        except ImportError:
-            pass
-        
-        # Check LangGraph
-        try:
-            import langgraph
-            dependencies["langgraph"] = True
-        except ImportError:
-            pass
-        
-        # Check OpenAI
-        try:
-            import openai
-            dependencies["openai"] = True
-        except ImportError:
-            pass
-        
-        # Check Chroma
-        try:
-            import chromadb
-            dependencies["chroma"] = True
-        except ImportError:
-            pass
-        
-        self.dependencies = dependencies
-        
-        # Log available dependencies
-        available = [k for k, v in dependencies.items() if v]
-        missing = [k for k, v in dependencies.items() if not v]
-        
-        if available and logger:
-            logger.info(f"Available dependencies: {', '.join(available)}")
-        if missing and logger:
-            logger.warning(f"Missing dependencies: {', '.join(missing)}")
+        logger.info("All dependencies are available")
     
     def create_chat_session(
         self,
@@ -137,19 +101,12 @@ class AgenticAIApp:
     
     def get_available_workflows(self) -> List[str]:
         """Get list of available workflow types."""
-        workflows = ["simple_chat"]
-        
-        if self.dependencies.get("langgraph"):
-            workflows.extend([
-                "context_aware",
-                "retrieval", 
-                "memory_enhanced"
-            ])
-        elif self.dependencies.get("openai"):
-            # Fallback workflows that work without LangGraph but with OpenAI
-            workflows.append("context_aware_fallback")
-        
-        return workflows
+        return [
+            "simple_chat",
+            "context_aware",
+            "retrieval", 
+            "memory_enhanced"
+        ]
     
     def get_system_info(self) -> Dict[str, Any]:
         """Get system information and status."""
@@ -250,58 +207,37 @@ class ChatSession:
                 self.workflow = None  # Simple chat doesn't need workflow
                 
             elif self.workflow_type == "context_aware":
-                if self.app.dependencies.get("langgraph"):
-                    from src.graph import GraphFactory
-                    graph = GraphFactory.create_context_aware_graph()
-                    if graph:
-                        from src.graph import WorkflowRunner
-                        self.workflow = WorkflowRunner(graph)
-                    else:
-                        self.workflow = None
-                        if logger:
-                            logger.warning("Failed to create context-aware graph")
+                from src.graph import GraphFactory
+                graph = GraphFactory.create_context_aware_graph()
+                if graph:
+                    from src.graph import WorkflowRunner
+                    self.workflow = WorkflowRunner(graph)
                 else:
                     self.workflow = None
                     if logger:
-                        logger.warning("LangGraph not available, using fallback chat")
+                        logger.warning("Failed to create context-aware graph")
                         
             elif self.workflow_type == "retrieval":
-                if self.app.dependencies.get("langgraph"):
-                    from src.graph import GraphFactory
-                    graph = GraphFactory.create_retrieval_graph()
-                    if graph:
-                        from src.graph import WorkflowRunner
-                        self.workflow = WorkflowRunner(graph)
-                    else:
-                        self.workflow = None
-                        if logger:
-                            logger.warning("Failed to create retrieval graph")
+                from src.graph import GraphFactory
+                graph = GraphFactory.create_retrieval_graph()
+                if graph:
+                    from src.graph import WorkflowRunner
+                    self.workflow = WorkflowRunner(graph)
                 else:
                     self.workflow = None
                     if logger:
-                        logger.warning("LangGraph not available for retrieval workflow")
+                        logger.warning("Failed to create retrieval graph")
                         
             elif self.workflow_type == "memory_enhanced":
-                if self.app.dependencies.get("langgraph"):
-                    from src.graph import GraphFactory
-                    graph = GraphFactory.create_memory_enhanced_graph()
-                    if graph:
-                        from src.graph import WorkflowRunner
-                        self.workflow = WorkflowRunner(graph)
-                    else:
-                        self.workflow = None
-                        if logger:
-                            logger.warning("Failed to create memory-enhanced graph")
+                from src.graph import GraphFactory
+                graph = GraphFactory.create_memory_enhanced_graph()
+                if graph:
+                    from src.graph import WorkflowRunner
+                    self.workflow = WorkflowRunner(graph)
                 else:
                     self.workflow = None
                     if logger:
-                        logger.warning("LangGraph not available for memory-enhanced workflow")
-                        
-            elif self.workflow_type == "context_aware_fallback":
-                # OpenAI-only fallback without LangGraph
-                self.workflow = None
-                if logger:
-                    logger.info("Using OpenAI fallback mode for context-aware workflow")
+                        logger.warning("Failed to create memory-enhanced graph")
                     
             else:
                 self.workflow = None

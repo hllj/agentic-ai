@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from src.configuration import get_config
 from src.states import ContextAwareState
 from src.utils import setup_logging
+import openai
 
 
 @dataclass
@@ -26,12 +27,6 @@ class Message:
     role: str
     content: str
     timestamp: str
-
-try:
-    import openai
-except ImportError:
-    print("OpenAI package not available. Install with: uv pip install openai")
-    sys.exit(1)
 
 
 class SimpleContextChatbot:

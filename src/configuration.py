@@ -9,13 +9,8 @@ import os
 from typing import Optional, Dict, Any, Union
 from dataclasses import dataclass, field
 
-# Try to load environment variables from .env file
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    # dotenv is optional
-    pass
+from dotenv import load_dotenv
+load_dotenv()
 
 
 @dataclass

@@ -3,15 +3,7 @@ from typing import Dict, Any, Optional
 import logging
 from datetime import datetime
 
-# Import LangGraph components when available
-try:
-    from langgraph.graph import StateGraph, END
-    LANGGRAPH_AVAILABLE = True
-except ImportError:
-    # Fallback when LangGraph is not available
-    LANGGRAPH_AVAILABLE = False
-    StateGraph = None
-    END = "END"
+from langgraph.graph import StateGraph, END
 from ..configuration import get_config
 
 class BaseGraphBuilder:
@@ -20,9 +12,6 @@ class BaseGraphBuilder:
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or get_config().__dict__
         self.logger = logging.getLogger(__name__)
-        
-        if not LANGGRAPH_AVAILABLE:
-            self.logger.warning("LangGraph is not available. Some functionality will be limited.")
     
     def create_graph(self) -> Optional[StateGraph]:
         """Create the main workflow graph. To be implemented by subclasses."""
@@ -30,9 +19,6 @@ class BaseGraphBuilder:
     
     def add_error_handling(self, graph: StateGraph) -> None:
         """Add error handling nodes to the graph."""
-        if not LANGGRAPH_AVAILABLE:
-            return
-        
         def error_handler(state: Dict[str, Any]) -> Dict[str, Any]:
             """Handle errors in the workflow."""
             error_info = state.get("error_info", {})
