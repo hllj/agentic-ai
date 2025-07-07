@@ -115,3 +115,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Ready to build the future of AI agents?** Start with [Module I](./docs/module-01-context-aware-llm/) and begin your journey into agentic AI! 🚀
+
+## TODO
+
+- Update placeholder for all nodes.
+- Update magic number in configuration.
+- Update for each workflow.
+- Setup context: ChromaDB, User Profile, Memory.

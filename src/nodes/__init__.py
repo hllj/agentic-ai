@@ -126,7 +126,7 @@ def retrieve_conversation_history(state: Dict[str, Any]) -> Dict[str, Any]:
     session_id = state.get("session_id")
     user_id = state.get("user_id")
     
-    # In practice, this would query a database or memory store
+    # TODO: Conversation Retrieval. In practice, this would query a database or memory store
     # For now, we'll use the messages already in state
     
     # Get conversation history (excluding the current message)
@@ -164,7 +164,7 @@ def retrieve_user_profile(state: Dict[str, Any]) -> Dict[str, Any]:
     user_id = state.get("user_id")
     session_id = state.get("session_id")
     
-    # Placeholder for user profile retrieval
+    # TODO: User Profile Retrieval. Placeholder for user profile retrieval
     # In practice, this would query a user database
     
     default_profile = {
@@ -217,7 +217,7 @@ def search_knowledge_base(state: Dict[str, Any]) -> Dict[str, Any]:
             }
         }
     
-    # Placeholder for vector database search
+    # TODO: Knowledge Base Retrieval. Placeholder for vector database search
     # In practice, this would use a vector database like Chroma
     
     # Mock retrieved documents
@@ -311,6 +311,7 @@ def load_buffer_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     messages = state.get("messages", [])
     session_id = state.get("session_id")
     
+    # TODO: Create configuration for buffer size. 
     # Buffer memory contains recent messages
     buffer_size = 10  # Keep last 10 messages
     buffer_memory = messages[-buffer_size:] if messages else []
@@ -330,6 +331,7 @@ def load_summary_memory(state: Dict[str, Any]) -> Dict[str, Any]:
     session_id = state.get("session_id")
     user_id = state.get("user_id")
     
+    # TODO: Memory Retrieval. 
     # Placeholder for summary memory retrieval
     # In practice, this would retrieve from a memory store
     
@@ -358,6 +360,7 @@ def update_conversation_memory(state: Dict[str, Any]) -> Dict[str, Any]:
         if message not in updated_buffer:
             updated_buffer.append(message)
     
+    # TODO: Create configuration for Max Buffer Size.
     # Keep buffer size manageable
     max_buffer_size = 20
     if len(updated_buffer) > max_buffer_size:
@@ -452,6 +455,8 @@ def generate_rag_response(state: Dict[str, Any]) -> Dict[str, Any]:
         }
         return {"messages": [response_message]}
     
+    # TODO: Create configuration for max document limit for RAG responses
+    # Limit to top 3 documents for response generation
     # Format documents into context
     context_parts = []
     for doc in retrieved_docs[:3]:  # Use top 3 documents
@@ -574,26 +579,3 @@ def log_interaction(state: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "interaction_log": interaction_log
     }
-
-
-if __name__ == "__main__":
-    # Test some nodes
-    print("Testing processing nodes...")
-    
-    # Test input processing
-    test_state = {
-        "messages": [
-            {"role": "user", "content": "Hello, how are you?"}
-        ],
-        "session_id": "test_session",
-        "user_id": "test_user"
-    }
-    
-    result = process_user_input(test_state)
-    print(f"Input processing result: {result}")
-    
-    # Test intent extraction
-    result = extract_intent({**test_state, **result})
-    print(f"Intent extraction result: {result}")
-    
-    print("Node testing completed!")

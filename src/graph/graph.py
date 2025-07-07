@@ -77,7 +77,7 @@ class ContextAwareGraphBuilder(BaseGraphBuilder):
         context = state.get("context", {})
         user_input = context.get("user_input", "")
         
-        # Placeholder for context retrieval logic
+        # TODO: Retrieve Context for Context Aware Workflow. Placeholder for context retrieval logic
         # In a real implementation, this would:
         # 1. Search vector database for relevant documents
         # 2. Retrieve conversation history
@@ -219,7 +219,7 @@ class RetrievalGraphBuilder(BaseGraphBuilder):
         """Retrieve relevant documents from vector database."""
         query = state.get("query", "")
         
-        # Placeholder for document retrieval
+        # TODO: Document Retrieval. Placeholder for document retrieval
         # In a real implementation, this would use vector similarity search
         
         retrieved_docs = [
@@ -242,6 +242,7 @@ class RetrievalGraphBuilder(BaseGraphBuilder):
         retrieved_docs = state.get("retrieved_docs", [])
         query = state.get("query", "")
         
+        # TODO: Reranker. Placeholder for reranking logic
         # Simple reranking by score (in practice, would use a reranking model)
         reranked_docs = sorted(retrieved_docs, key=lambda x: x.get("score", 0), reverse=True)
         
@@ -351,7 +352,7 @@ class MemoryEnhancedGraphBuilder(BaseGraphBuilder):
     
     def _load_memory(self, state: MemoryEnhancedState) -> Dict[str, Any]:
         """Load various types of memory."""
-        # Placeholder for memory loading
+        # TODO: Memory Loading. Placeholder for memory loading
         # In practice, would load from different memory systems
         
         buffer_memory = state.get("buffer_memory", [])
