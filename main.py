@@ -14,8 +14,16 @@ from datetime import datetime
 # Import core modules
 from src.configuration import get_config, validate_config
 from src.states import create_context_aware_state, create_retrieval_state
-from src.utils import setup_logging
 from src.tools import tool_manager
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+# Setup basic logging configuration
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.DEBUG,
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 
 
 # =====================================
@@ -28,7 +36,6 @@ class AgenticAIApp:
     def __init__(self, config_overrides: Optional[Dict[str, Any]] = None):
         """Initialize the application."""
         self.config = get_config()
-        self.logger = None
         self.initialized = False
         
         # Apply configuration overrides
@@ -42,13 +49,7 @@ class AgenticAIApp:
     def _initialize(self):
         """Initialize the application components."""
         try:
-            # Setup logging
-            self.logger = setup_logging(
-                level=self.config.log_level,
-                log_file=None if self.config.environment == "development" else "agentic_ai.log"
-            )
-            
-            self.logger.info("Initializing Agentic AI Application...")
+            logger.info("Initializing Agentic AI Application...")
             
             # Validate configuration
             validate_config()
@@ -57,11 +58,11 @@ class AgenticAIApp:
             self._check_dependencies()
             
             self.initialized = True
-            self.logger.info("Application initialized successfully")
+            logger.info("Application initialized successfully")
             
         except Exception as e:
-            if self.logger:
-                self.logger.error(f"Failed to initialize application: {e}")
+            if logger:
+                logger.error(f"Failed to initialize application: {e}")
             else:
                 print(f"Failed to initialize application: {e}")
             raise
@@ -109,10 +110,10 @@ class AgenticAIApp:
         available = [k for k, v in dependencies.items() if v]
         missing = [k for k, v in dependencies.items() if not v]
         
-        if available and self.logger:
-            self.logger.info(f"Available dependencies: {', '.join(available)}")
-        if missing and self.logger:
-            self.logger.warning(f"Missing dependencies: {', '.join(missing)}")
+        if available and logger:
+            logger.info(f"Available dependencies: {', '.join(available)}")
+        if missing and logger:
+            logger.warning(f"Missing dependencies: {', '.join(missing)}")
     
     def create_chat_session(
         self,
@@ -181,7 +182,6 @@ class ChatSession:
         self.user_id = user_id
         self.session_id = session_id
         self.workflow_type = workflow_type
-        self.logger = app.logger or logging.getLogger(__name__)
         
         # Session state
         self.messages: List[Dict[str, Any]] = []
@@ -191,8 +191,57 @@ class ChatSession:
         # Initialize workflow
         self._initialize_workflow()
         
-        if self.logger:
-            self.logger.info(f"Created chat session {session_id} for user {user_id}")
+        # Initialize workflow-specific state
+        self._initialize_session_state()
+        
+        if logger:
+            logger.info(f"Created chat session {session_id} for user {user_id}")
+    
+    def _initialize_session_state(self) -> None:
+        """Initialize session state based on workflow type."""
+        # Base state for all workflows
+        self.context = {
+            "workflow_type": self.workflow_type,
+            "session_id": self.session_id,
+            "user_id": self.user_id,
+            "created_at": datetime.now().isoformat()
+        }
+        
+        self.memory = {
+            "conversation_count": 0,
+            "last_updated": datetime.now().isoformat()
+        }
+        
+        # Workflow-specific initialization
+        if self.workflow_type == "retrieval":
+            self.context.update({
+                "retrieved_context": "",
+                "retrieved_docs": [],
+                "sources": [],
+                "retrieval_metadata": {}
+            })
+        
+        elif self.workflow_type == "memory_enhanced":
+            self.memory.update({
+                "summary": "",
+                "buffer_memory": [],
+                "vector_memory_ids": [],
+                "memory_metadata": {},
+                "user_profile": {}
+            })
+        
+        elif self.workflow_type == "context_aware":
+            self.context.update({
+                "conversation_context": {},
+                "user_preferences": {}
+            })
+            self.memory.update({
+                "context_summary": "",
+                "interaction_history": []
+            })
+        
+        if logger:
+            logger.debug(f"Initialized session state for workflow: {self.workflow_type}")
     
     def _initialize_workflow(self):
         """Initialize the workflow based on type."""
@@ -209,12 +258,12 @@ class ChatSession:
                         self.workflow = WorkflowRunner(graph)
                     else:
                         self.workflow = None
-                        if self.logger:
-                            self.logger.warning("Failed to create context-aware graph")
+                        if logger:
+                            logger.warning("Failed to create context-aware graph")
                 else:
                     self.workflow = None
-                    if self.logger:
-                        self.logger.warning("LangGraph not available, using fallback chat")
+                    if logger:
+                        logger.warning("LangGraph not available, using fallback chat")
                         
             elif self.workflow_type == "retrieval":
                 if self.app.dependencies.get("langgraph"):
@@ -225,12 +274,12 @@ class ChatSession:
                         self.workflow = WorkflowRunner(graph)
                     else:
                         self.workflow = None
-                        if self.logger:
-                            self.logger.warning("Failed to create retrieval graph")
+                        if logger:
+                            logger.warning("Failed to create retrieval graph")
                 else:
                     self.workflow = None
-                    if self.logger:
-                        self.logger.warning("LangGraph not available for retrieval workflow")
+                    if logger:
+                        logger.warning("LangGraph not available for retrieval workflow")
                         
             elif self.workflow_type == "memory_enhanced":
                 if self.app.dependencies.get("langgraph"):
@@ -241,27 +290,27 @@ class ChatSession:
                         self.workflow = WorkflowRunner(graph)
                     else:
                         self.workflow = None
-                        if self.logger:
-                            self.logger.warning("Failed to create memory-enhanced graph")
+                        if logger:
+                            logger.warning("Failed to create memory-enhanced graph")
                 else:
                     self.workflow = None
-                    if self.logger:
-                        self.logger.warning("LangGraph not available for memory-enhanced workflow")
+                    if logger:
+                        logger.warning("LangGraph not available for memory-enhanced workflow")
                         
             elif self.workflow_type == "context_aware_fallback":
                 # OpenAI-only fallback without LangGraph
                 self.workflow = None
-                if self.logger:
-                    self.logger.info("Using OpenAI fallback mode for context-aware workflow")
+                if logger:
+                    logger.info("Using OpenAI fallback mode for context-aware workflow")
                     
             else:
                 self.workflow = None
-                if self.logger:
-                    self.logger.warning(f"Unknown workflow type: {self.workflow_type}")
+                if logger:
+                    logger.warning(f"Unknown workflow type: {self.workflow_type}")
                 
         except Exception as e:
-            if self.logger:
-                self.logger.error(f"Failed to initialize workflow: {e}")
+            if logger:
+                logger.error(f"Failed to initialize workflow: {e}")
             self.workflow = None
     
     def send_message(self, content: str) -> Dict[str, Any]:
@@ -278,6 +327,10 @@ class ChatSession:
             "content": content.strip(),
             "timestamp": datetime.now()
         }
+        
+        # Update conversation metadata
+        self.memory["conversation_count"] = self.memory.get("conversation_count", 0) + 1
+        self.memory["last_updated"] = datetime.now().isoformat()
         
         # Add to messages
         self.messages.append(user_message)
@@ -299,8 +352,8 @@ class ChatSession:
             return response
             
         except Exception as e:
-            if self.logger:
-                self.logger.error(f"Error processing message: {e}")
+            if logger:
+                logger.error(f"Error processing message: {e}")
             
             error_response = {
                 "role": "assistant",
@@ -314,44 +367,30 @@ class ChatSession:
     
     def _process_with_workflow(self, user_message: Dict[str, Any]) -> Dict[str, Any]:
         """Process message using LangGraph workflow."""
-        if self.logger:
-            self.logger.info(f"Processing message with workflow: {self.workflow_type}")
+        if logger:
+            logger.info(f"Processing message with workflow: {self.workflow_type}")
         
         if not self.workflow:
             # Fallback if workflow is None
             return self._process_fallback(user_message)
         
         try:
-            # Create appropriate state based on workflow type
-            if self.workflow_type == "retrieval":
-                state = create_retrieval_state(
-                    query=user_message["content"],
-                    messages=self.messages.copy()
-                )
-            else:
-                state = create_context_aware_state(
-                    messages=self.messages.copy(),
-                    user_id=self.user_id,
-                    session_id=self.session_id
-                )
-            
-            # Convert state to dictionary format that WorkflowRunner expects
-            state_dict = dict(state) if hasattr(state, '__iter__') else vars(state)
+            # Get appropriate state based on workflow type
+            state_dict = self._get_workflow_state(user_message)
             
             # Run workflow
             result = self.workflow.run(state_dict)
             
-            # Update session state
-            if "context" in result:
-                self.context.update(result["context"])
-            if "memory" in result:
-                self.memory.update(result["memory"])
+            logger.info(f"Workflow execution result: {result}")
+            
+            # Update session state with proper type handling
+            self._update_session_state(result)
             
             return result
         
         except Exception as e:
-            if self.logger:
-                self.logger.error(f"Workflow execution failed: {e}")
+            if logger:
+                logger.error(f"Workflow execution failed: {e}")
             return self._process_fallback(user_message)
     
     def _process_fallback(self, user_message: Dict[str, Any]) -> Dict[str, Any]:
@@ -414,8 +453,8 @@ class ChatSession:
                     return f"Text analysis: {analysis['word_count']} words, {analysis['sentence_count']} sentences, estimated reading time: {analysis['estimated_reading_time_minutes']} minutes"
         
         except Exception as e:
-            if self.logger:
-                self.logger.error(f"Tool execution error: {e}")
+            if logger:
+                logger.error(f"Tool execution error: {e}")
         
         return None
     
@@ -426,12 +465,25 @@ class ChatSession:
         return self.messages.copy()
     
     def clear_conversation(self):
-        """Clear conversation history."""
+        """Clear conversation history and reset session state."""
         self.messages.clear()
-        self.context.clear()
-        self.memory.clear()
-        if self.logger:
-            self.logger.info(f"Cleared conversation for session {self.session_id}")
+        
+        # Reset conversation metadata but keep session info
+        session_info = {
+            "workflow_type": self.workflow_type,
+            "session_id": self.session_id,
+            "user_id": self.user_id,
+            "created_at": self.context.get("created_at", datetime.now().isoformat())
+        }
+        
+        # Re-initialize session state
+        self._initialize_session_state()
+        
+        # Restore session info
+        self.context.update(session_info)
+        
+        if logger:
+            logger.info(f"Cleared conversation for session {self.session_id}")
     
     def get_session_info(self) -> Dict[str, Any]:
         """Get session information."""
@@ -442,10 +494,138 @@ class ChatSession:
             "message_count": len(self.messages),
             "has_workflow": self.workflow is not None,
             "context_keys": list(self.context.keys()),
-            "memory_keys": list(self.memory.keys())
+            "memory_keys": list(self.memory.keys()),
+            "workflow_state": {
+                "context_size": len(str(self.context)),
+                "memory_size": len(str(self.memory)),
+                "last_updated": self.memory.get("last_updated", "unknown")
+            }
         }
-
-
+    
+    def _update_session_state(self, result: Dict[str, Any]) -> None:
+        """Update session state with proper type handling for context and memory."""
+        if "context" in result:
+            context_data = result["context"]
+            
+            # Handle different context types based on workflow
+            if isinstance(context_data, dict):
+                # For context_aware and memory_enhanced workflows
+                self.context.update(context_data)
+            elif isinstance(context_data, str):
+                # For retrieval workflows where context might be a string
+                if self.workflow_type == "retrieval":
+                    self.context["retrieved_context"] = context_data
+                else:
+                    self.context["context_string"] = context_data
+            elif isinstance(context_data, list):
+                # For workflows that return context as a list
+                self.context["context_list"] = context_data
+            else:
+                # Fallback for other types
+                self.context["context_data"] = context_data
+                if logger:
+                    logger.warning(f"Unexpected context type: {type(context_data)}")
+        
+        if "memory" in result:
+            memory_data = result["memory"]
+            
+            # Handle different memory types based on workflow
+            if isinstance(memory_data, dict):
+                # For memory_enhanced and context_aware workflows
+                self.memory.update(memory_data)
+            elif isinstance(memory_data, str):
+                # For workflows where memory is a summary string
+                if self.workflow_type == "memory_enhanced":
+                    self.memory["summary"] = memory_data
+                elif self.workflow_type == "context_aware":
+                    self.memory["context_summary"] = memory_data
+                else:
+                    self.memory["memory_string"] = memory_data
+            elif isinstance(memory_data, list):
+                # For workflows that return memory as a list (e.g., conversation buffer)
+                self.memory["buffer"] = memory_data
+            else:
+                # Fallback for other types
+                self.memory["memory_data"] = memory_data
+                if logger:
+                    logger.warning(f"Unexpected memory type: {type(memory_data)}")
+        
+        # Handle other workflow-specific state updates
+        if "retrieved_docs" in result:
+            self.context["retrieved_docs"] = result["retrieved_docs"]
+        
+        if "sources" in result:
+            self.context["sources"] = result["sources"]
+        
+        if "retrieval_metadata" in result:
+            self.context["retrieval_metadata"] = result["retrieval_metadata"]
+        
+        if "user_profile" in result:
+            self.memory["user_profile"] = result["user_profile"]
+        
+        if "buffer_memory" in result:
+            self.memory["buffer_memory"] = result["buffer_memory"]
+        
+        if "summary_memory" in result:
+            self.memory["summary_memory"] = result["summary_memory"]
+        
+        if "vector_memory_ids" in result:
+            self.memory["vector_memory_ids"] = result["vector_memory_ids"]
+        
+        if "memory_metadata" in result:
+            self.memory["memory_metadata"] = result["memory_metadata"]
+        
+        if logger:
+            logger.debug(f"Updated session state for workflow type: {self.workflow_type}")
+            logger.debug(f"Context keys: {list(self.context.keys())}")
+            logger.debug(f"Memory keys: {list(self.memory.keys())}")
+            logger.debug(f"Memory: {self.memory}")
+    
+    def _get_workflow_state(self, user_message: Dict[str, Any]) -> Dict[str, Any]:
+        """Get state dictionary appropriate for the workflow type."""
+        base_state = {
+            "messages": self.messages.copy(),
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "timestamp": datetime.now()
+        }
+        
+        if self.workflow_type == "retrieval":
+            return {
+                **base_state,
+                "query": user_message["content"],
+                "retrieved_docs": self.context.get("retrieved_docs", []),
+                "context": self.context.get("retrieved_context", ""),
+                "sources": self.context.get("sources", []),
+                "retrieval_metadata": self.context.get("retrieval_metadata", {})
+            }
+        
+        elif self.workflow_type == "memory_enhanced":
+            return {
+                **base_state,
+                "buffer_memory": self.memory.get("buffer_memory", []),
+                "summary_memory": self.memory.get("summary", ""),
+                "vector_memory_ids": self.memory.get("vector_memory_ids", []),
+                "memory_metadata": self.memory.get("memory_metadata", {}),
+                "user_profile": self.memory.get("user_profile", {})
+            }
+        
+        elif self.workflow_type == "context_aware":
+            return {
+                **base_state,
+                "context": self.context.copy(),
+                "memory": self.memory.copy()
+            }
+        
+        else:
+            # Default state for unknown workflow types
+            return {
+                **base_state,
+                "context": self.context.copy(),
+                "memory": self.memory.copy()
+            }
+       
+    
 # =====================================
 # COMMAND LINE INTERFACE
 # =====================================
