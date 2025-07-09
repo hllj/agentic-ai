@@ -12,6 +12,18 @@ from dataclasses import dataclass, field
 from dotenv import load_dotenv
 load_dotenv()
 
+@dataclass
+class PostgresConfig:
+    """PostgreSQL database configuration for conversation history and user preferences."""
+    
+    host: str = field(default_factory=lambda: os.getenv("POSTGRES_HOST", "localhost"))
+    port: int = field(default_factory=lambda: int(os.getenv("POSTGRES_PORT", "5432")))
+    database: str = field(default_factory=lambda: os.getenv("POSTGRES_DB", "agentic_ai"))
+    username: str = field(default_factory=lambda: os.getenv("POSTGRES_USER", ""))
+    password: str = field(default_factory=lambda: os.getenv("POSTGRES_PASSWORD", ""))
+    url: str = field(default_factory=lambda: os.getenv("POSTGRES_URL", ""))
+    pool_size: int = field(default_factory=lambda: int(os.getenv("POSTGRES_POOL_SIZE", "5")))
+    max_overflow: int = field(default_factory=lambda: int(os.getenv("POSTGRES_MAX_OVERFLOW", "10")))
 
 @dataclass
 class OpenAIConfig:
@@ -35,6 +47,13 @@ class VectorDBConfig:
     chunk_size: int = field(default_factory=lambda: int(os.getenv("CHUNK_SIZE", "1000")))
     chunk_overlap: int = field(default_factory=lambda: int(os.getenv("CHUNK_OVERLAP", "200")))
 
+@dataclass
+class DatabaseConfig:
+    """Database configuration for table management and migrations."""
+    
+    auto_create_tables: bool = field(default_factory=lambda: os.getenv("AUTO_CREATE_TABLES", "true").lower() == "true")
+    drop_tables_on_start: bool = field(default_factory=lambda: os.getenv("DROP_TABLES_ON_START", "false").lower() == "true")
+    enable_migrations: bool = field(default_factory=lambda: os.getenv("ENABLE_MIGRATIONS", "true").lower() == "true")
 
 @dataclass
 class MemoryConfig:
@@ -43,7 +62,7 @@ class MemoryConfig:
     buffer_size: int = field(default_factory=lambda: int(os.getenv("MEMORY_BUFFER_SIZE", "10")))
     summary_max_tokens: int = field(default_factory=lambda: int(os.getenv("MEMORY_SUMMARY_MAX_TOKENS", "1000")))
     vector_memory_k: int = field(default_factory=lambda: int(os.getenv("MEMORY_VECTOR_K", "5")))
-
+    use_postgres: bool = field(default_factory=lambda: os.getenv("USE_POSTGRES_MEMORY", "true").lower() == "true")
 
 @dataclass
 class ApplicationConfig:
@@ -58,6 +77,8 @@ class ApplicationConfig:
     openai: OpenAIConfig = field(default_factory=OpenAIConfig)
     vector_db: VectorDBConfig = field(default_factory=VectorDBConfig)
     memory: MemoryConfig = field(default_factory=MemoryConfig)
+    postgres: PostgresConfig = field(default_factory=PostgresConfig)
+    database: DatabaseConfig = field(default_factory=DatabaseConfig)
 
 
 # Global configuration instance
@@ -106,7 +127,44 @@ def get_memory_config() -> Dict[str, Any]:
         "buffer_size": config.memory.buffer_size,
         "summary_max_tokens": config.memory.summary_max_tokens,
         "vector_memory_k": config.memory.vector_memory_k,
+        "use_postgres": config.memory.use_postgres,
     }
+
+
+def get_postgres_config() -> Dict[str, Any]:
+    """Get PostgreSQL configuration as dictionary."""
+    return {
+        "host": config.postgres.host,
+        "port": config.postgres.port,
+        "database": config.postgres.database,
+        "username": config.postgres.username,
+        "password": config.postgres.password,
+        "url": config.postgres.url,
+        "pool_size": config.postgres.pool_size,
+        "max_overflow": config.postgres.max_overflow,
+    }
+
+
+def get_database_config() -> Dict[str, Any]:
+    """Get database management configuration as dictionary."""
+    return {
+        "auto_create_tables": config.database.auto_create_tables,
+        "drop_tables_on_start": config.database.drop_tables_on_start,
+        "enable_migrations": config.database.enable_migrations,
+    }
+
+
+def get_database_url() -> str:
+    """Get database URL for SQLAlchemy."""
+    if config.postgres.url:
+        return config.postgres.url
+    else:
+        return (
+            f"postgresql://{config.postgres.username}:"
+            f"{config.postgres.password}@"
+            f"{config.postgres.host}:{config.postgres.port}/"
+            f"{config.postgres.database}"
+        )
 
 
 # Validation function to ensure all required settings are present
@@ -116,6 +174,13 @@ def validate_config() -> None:
         # Test OpenAI API key
         if not config.openai.api_key:
             raise ValueError("OPENAI_API_KEY is required")
+        
+        # Validate PostgreSQL configuration
+        if config.memory.use_postgres:
+            if not config.postgres.url:
+                if not all([config.postgres.host, config.postgres.database, 
+                           config.postgres.username, config.postgres.password]):
+                    raise ValueError("PostgreSQL configuration is incomplete. Either provide POSTGRES_URL or all individual parameters (host, database, username, password)")
         
         # Create data directory if it doesn't exist
         os.makedirs(config.data_directory, exist_ok=True)

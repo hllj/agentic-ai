@@ -77,6 +77,83 @@ cp .env.example .env
 # Edit .env with your API keys
 ```
 
+# Agentic AI Application
+
+## Environment Setup
+
+### 1. Environment Configuration
+
+Copy the example environment file and configure your settings:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` with your actual values:
+
+#### Required Configuration
+
+- **OPENAI_API_KEY**: Your OpenAI API key
+- **POSTGRES_***: PostgreSQL database connection details
+
+#### Optional Configuration
+
+- **VECTOR_DB_PROVIDER**: Vector database provider (default: chroma)
+- **MEMORY_***: Memory system settings
+- **DEBUG**: Enable debug mode (default: false)
+
+### 2. Database Setup
+
+#### PostgreSQL Setup
+
+1. Install PostgreSQL locally or use a cloud provider
+2. Create a database:
+   ```sql
+   CREATE DATABASE agentic_ai;
+   ```
+3. Update your `.env` file with database credentials
+
+#### Database Tables
+
+Tables will be created automatically when you first run the application if `AUTO_CREATE_TABLES=true` (default).
+
+### 3. Vector Database Setup
+
+ChromaDB will automatically create the necessary files in the directory specified by `CHROMA_PERSIST_DIR`.
+
+### 4. Running the Application
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Validate configuration
+python -m src.configuration
+
+# Initialize database
+python -c "from src.database import init_database; init_database()"
+
+# Run your application
+python main.py
+```
+
+## Configuration Reference
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `OPENAI_API_KEY` | OpenAI API key | - | Yes |
+| `POSTGRES_HOST` | PostgreSQL host | localhost | Yes* |
+| `POSTGRES_USER` | PostgreSQL username | - | Yes* |
+| `POSTGRES_PASSWORD` | PostgreSQL password | - | Yes* |
+| `POSTGRES_DB` | PostgreSQL database name | agentic_ai | Yes* |
+| `POSTGRES_URL` | Complete PostgreSQL URL | - | Alternative* |
+| `CHROMA_PERSIST_DIR` | ChromaDB storage directory | ./data/chroma | No |
+| `EMBEDDING_MODEL` | OpenAI embedding model | text-embedding-3-small | No |
+| `MEMORY_BUFFER_SIZE` | Conversation memory buffer size | 10 | No |
+| `USE_POSTGRES_MEMORY` | Enable PostgreSQL memory storage | true | No |
+
+\* Either provide individual PostgreSQL parameters or `POSTGRES_URL`
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
